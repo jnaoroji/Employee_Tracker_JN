@@ -11,6 +11,57 @@ connection.connect(function (err) {
 function run() {
   promptUser();
 }
+// const updateEmployee = async () => {
+//    //Get the list of employees
+//   getEmployees().then((employees) => {
+//     // Create a choices array for the inquirer prompt
+//     const choices = employees.map((employee) => {
+//       return { name: employee.first_name + ' ' + employee.last_name, value: employee.id };
+//     });  
+
+//   // const sql = `UPDATE role SET role = ? WHERE id = ?`
+
+// }
+const updateEmployee = () => {
+  // Get the list of employees
+  getEmployees().then((employees) => {
+    // Create a choices array for the inquirer prompt
+    const choices = employees.map((employee) => {
+      return { name: employee.first_name + ' ' + employee.last_name, value: employee.id };
+    });
+
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          message: "Select an employee to update their role:",
+          name: "employeeId",
+          choices: choices,
+        },
+        {
+          type: "input",
+          message: "Enter the new role for the selected employee:",
+          name: "newRole",
+        },
+      ])
+      .then((res) => {
+        const employeeId = res.employeeId;
+        const newRole = res.newRole;
+        const sql = `UPDATE employee SET role_id = ? WHERE id = ?`;
+        const params = [newRole, employeeId];
+
+        connection.query(sql, params, (err) => {
+          if (err) {
+            console.error(err);
+            return;
+          }
+          console.log(`Updated role for employee ${employeeId} to ${newRole}!`);
+          promptUser();
+        });
+      });
+  });
+};
+
 const getEmployees = () => {
   const sql = `SELECT * FROM employee`;
   let params = {};
@@ -165,7 +216,7 @@ const addEmployee = async () => {
         message: "Who is this employees manager?",
         name: "employeeManager",
         choices: employees.map((employee) => {
-          return { name: employee.first_name,value: employee.id };
+          return { name: employee.first_name + ' ' + employee.last_name, value: employee.id };
         }),
       },
     ])
@@ -175,7 +226,7 @@ const addEmployee = async () => {
       const newLname = res.lastName;
       const departmentRoles = res.departmentRoles;
       const employeeManager = res.employeeManager;
-      const sql = `INSERT INTO role (first_name, last_name, role_id, manager_id)
+      const sql = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
           VALUES (?, ?, ?, ?)`;
 
       connection.query(sql, [newFname, newLname, departmentRoles, employeeManager], (err) => {
@@ -183,7 +234,7 @@ const addEmployee = async () => {
           return;
         }
         console.log(
-          `added ${newFname} ${newLname}. Their new role is ${departmentRoles} and their manager is ${employeeManager}!`
+          `Added ${newFname} ${newLname}. Their new role is ${departmentRoles} and their manager is ${employeeManager}!`
         );
         promptUser();
       });
@@ -225,6 +276,8 @@ function promptUser() {
         addRole();
       } else if (userChoice === "Add an Employee") {
         addEmployee();
+      } else if (userChoice === "Update an Employee Role") {
+        updateEmployee();
       } else if (userChoice === "Quit") {
         console.log("Goodbye!");
         return; // Exit the recursive loop
@@ -235,3 +288,24 @@ function promptUser() {
 }
 
 run();
+
+// app.put('/api/review/:id', (req, res) => {
+//   const sql = `UPDATE reviews SET review = ? WHERE id = ?`;
+//   const params = [req.body.review, req.params.id];
+
+//   db.query(sql, params, (err, result) => {
+//     if (err) {
+//       res.status(400).json({ error: err.message });
+//     } else if (!result.affectedRows) {
+//       res.json({
+//         message: 'Movie not found'
+//       });
+//     } else {
+//       res.json({
+//         message: 'success',
+//         data: req.body,
+//         changes: result.affectedRows
+//       });
+//     }
+//   });
+// });
