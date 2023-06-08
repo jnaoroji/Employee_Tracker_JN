@@ -11,42 +11,41 @@ connection.connect(function (err) {
 function run() {
   promptUser();
 }
-// const updateEmployee = async () => {
-//    //Get the list of employees
-//   getEmployees().then((employees) => {
-//     // Create a choices array for the inquirer prompt
-//     const choices = employees.map((employee) => {
-//       return { name: employee.first_name + ' ' + employee.last_name, value: employee.id };
-//     });  
-
-//   // const sql = `UPDATE role SET role = ? WHERE id = ?`
-
-// }
 const updateEmployee = () => {
   // Get the list of employees
   getEmployees().then((employees) => {
     // Create a choices array for the inquirer prompt
-    const choices = employees.map((employee) => {
+    const choicesEmployee = employees.map((employee) => {
       return { name: employee.first_name + ' ' + employee.last_name, value: employee.id };
     });
 
+    // Get the list of roles
+    getRoles().then((roles) => {
+      // Create a choices array for the roles
+      const choicesRole = roles.map((role) => {
+        return { name: role.title, value: role.id };
+      });
+    
     inquirer
       .prompt([
         {
           type: "list",
           message: "Select an employee to update their role:",
           name: "employeeId",
-          choices: choices,
+          choices: choicesEmployee,
         },
         {
-          type: "input",
-          message: "Enter the new role for the selected employee:",
+          type: "list",
+          message: "Assign a role for this employee:",
           name: "newRole",
+          choices: choicesRole,
         },
       ])
       .then((res) => {
         const employeeId = res.employeeId;
         const newRole = res.newRole;
+        const selectedRole = roles.find((role) => role.id === newRole);
+        const newRoleTitle = selectedRole.title;
         const sql = `UPDATE employee SET role_id = ? WHERE id = ?`;
         const params = [newRole, employeeId];
 
@@ -55,13 +54,15 @@ const updateEmployee = () => {
             console.error(err);
             return;
           }
-          console.log(`Updated role for employee ${employeeId} to ${newRole}!`);
+          const selectedEmployee = employees.find((employee) => employee.id === employeeId);
+          const employeeFirstName = selectedEmployee.first_name;
+          console.log(`Updated role for employee ${employeeFirstName} to ${newRoleTitle}!`);
           promptUser();
         });
       });
-  });
-};
-
+  })
+});
+}
 const getEmployees = () => {
   const sql = `SELECT * FROM employee`;
   let params = {};
@@ -77,9 +78,48 @@ const getEmployees = () => {
 };
 const viewEmployees = async () => {
   const employees = await getEmployees();
-  console.table(employees);
+  const roles = await getRoles();
+  const departments = await getDepartments();
+
+  // Map role IDs to role titles
+  const roleMap = roles.reduce((map, role) => {
+    map[role.id] = role.title;
+    return map;
+  }, {});
+
+  // Map department IDs to department names
+  const departmentMap = departments.reduce((map, department) => {
+    map[department.id] = department.department_name;
+    return map;
+  }, {});
+  // Create a map of employee IDs to manager names
+  const managerMap = employees.reduce((map, employee) => {
+    const manager = employees.find((e) => e.id === employee.manager_id);
+    if (manager) {
+      map[employee.id] = `${manager.first_name} ${manager.last_name}`;
+    } else {
+      map[employee.id] = 'null';
+    }
+    return map;
+  }, {});
+
+  // Replace role_id and department_id with corresponding titles/names in employees data
+  const employeesWithDetails = employees.map((employee) => {
+    return {
+      id: employee.id,
+      first_name: employee.first_name,
+      last_name: employee.last_name,
+      title: roleMap[employee.role_id],
+      salary: roles.find((role) => role.id === employee.role_id).salary,
+      department_name: departmentMap[roles.find((role) => role.id === employee.role_id).department_id],
+      manager: managerMap[employee.id],
+    };
+  });
+
+  console.table(employeesWithDetails);
   promptUser();
 };
+
 
 const getRoles = () => {
   const sql = `SELECT * FROM role`;
@@ -97,9 +137,27 @@ const getRoles = () => {
 
 const viewRoles = async () => {
   const roles = await getRoles();
-  console.table(roles);
+  const departments = await getDepartments();
+
+  // Map department IDs to department names
+  const departmentMap = departments.reduce((map, department) => {
+    map[department.id] = department.department_name;
+    return map;
+  }, {});
+
+  // Replace department_id with department_name in roles data
+  const rolesWithDepartmentNames = roles.map((role) => {
+    return {
+      id: role.id,
+      title: role.title,
+      salary: role.salary,
+      department: departmentMap[role.department_id],
+    };
+  });
+
+  console.table(rolesWithDepartmentNames);
   promptUser();
-  
+
 };
 const getDepartments = () => {
   const sql = `SELECT * FROM department`;
@@ -126,11 +184,11 @@ const addDepartment = () => {
       {
         type: "input",
         name: "addDepartment",
-        message: "What would you like to call your department?",
+        message: "What is the name of the department?",
       },
     ])
     .then((res) => {
-      console.log(res.addDepartment);
+      // console.log(res.addDepartment);
       const newDepartment = res.addDepartment;
 
       const sql = `INSERT INTO department (department_name)
@@ -140,7 +198,7 @@ const addDepartment = () => {
         if (err) {
           return;
         }
-        console.log(`added ${newDepartment} to departments!`);
+        console.log(`Added ${newDepartment} to departments!`);
         promptUser();
       });
     });
@@ -170,10 +228,14 @@ const addRole = async () => {
       },
     ])
     .then((res) => {
-      console.log({ res });
+
       const newRole = res.roleTitle;
       const roleSalary = res.roleSalary;
       const departmentRoles = res.departmentRoles;
+      const selectedDepartment = departments.find(
+        (department) => department.id === departmentRoles
+      );
+      const departmentName = selectedDepartment.department_name;
       const sql = `INSERT INTO role (title, salary, department_id)
           VALUES (?, ?, ?)`;
 
@@ -182,7 +244,7 @@ const addRole = async () => {
           return;
         }
         console.log(
-          `added ${newRole}, ${roleSalary} and ${departmentRoles} to role!`
+          `Added new role of ${newRole}, with a salary of ${roleSalary} into ${departmentName} department!`
         );
         promptUser();
       });
@@ -205,7 +267,7 @@ const addEmployee = async () => {
       },
       {
         type: "list",
-        message: "What is this emploees role?",
+        message: "What is this employees role?",
         name: "departmentRoles",
         choices: departments.map((department) => {
           return { name: department.department_name, value: department.id };
@@ -221,11 +283,20 @@ const addEmployee = async () => {
       },
     ])
     .then((res) => {
-      console.log({ res });
+
       const newFname = res.firstName;
       const newLname = res.lastName;
       const departmentRoles = res.departmentRoles;
+      const selectedDepartment = departments.find(
+        (department) => department.id === departmentRoles
+      );
+      const departmentName = selectedDepartment.department_name;
       const employeeManager = res.employeeManager;
+      const selectedManager = employees.find(
+        (employee) => employee.id === employeeManager
+      );
+      const managerName = selectedManager.first_name + ' ' + selectedManager.last_name;
+
       const sql = `INSERT INTO employee (first_name, last_name, role_id, manager_id)
           VALUES (?, ?, ?, ?)`;
 
@@ -234,7 +305,7 @@ const addEmployee = async () => {
           return;
         }
         console.log(
-          `Added ${newFname} ${newLname}. Their new role is ${departmentRoles} and their manager is ${employeeManager}!`
+          `Added ${newFname} ${newLname} to database! Their new role is ${departmentName} and their manager is ${managerName}.`
         );
         promptUser();
       });
@@ -261,7 +332,7 @@ function promptUser() {
     ])
 
     .then((answers) => {
-      console.log(answers);
+
       const userChoice = answers.todo;
 
       if (userChoice === "View all Employees") {
@@ -288,24 +359,3 @@ function promptUser() {
 }
 
 run();
-
-// app.put('/api/review/:id', (req, res) => {
-//   const sql = `UPDATE reviews SET review = ? WHERE id = ?`;
-//   const params = [req.body.review, req.params.id];
-
-//   db.query(sql, params, (err, result) => {
-//     if (err) {
-//       res.status(400).json({ error: err.message });
-//     } else if (!result.affectedRows) {
-//       res.json({
-//         message: 'Movie not found'
-//       });
-//     } else {
-//       res.json({
-//         message: 'success',
-//         data: req.body,
-//         changes: result.affectedRows
-//       });
-//     }
-//   });
-// });

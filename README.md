@@ -21,13 +21,13 @@ SO THAT I can organize and plan my business
 ```md
 GIVEN a command-line application that accepts user input X
 WHEN I start the application X
-THEN I am presented with the following options: view all departmentsX, view all rolesX, view all employeesX, add a departmentX, add a roleX, add an employeeX, and update an employee role ~
+THEN I am presented with the following options: view all departmentsX, view all rolesX, view all employeesX, add a departmentX, add a roleX, add an employeeX, and update an employee role X
 WHEN I choose to view all departmentsX
 THEN I am presented with a formatted table showing department names and department idsX
 WHEN I choose to view all rolesX
-THEN I am presented with the job title, role id, the department that role belongs to~, and the salary for that roleX
+THEN I am presented with the job title, role id, the department that role belongs toX, and the salary for that roleX
 WHEN I choose to view all employeesX
-THEN I am presented with a formatted table showing employee data, including employee idsX, first namesX, last namesX, job titles~, departments~, salaries~, and managers~ that the employees report to
+THEN I am presented with a formatted table showing employee data, including employee idsX, first namesX, last namesX, job titlesX, departmentsX, salariesX, and managersX that the employees report to
 WHEN I choose to add a departmentX
 THEN I am prompted to enter the name of the department and that department is added to the databaseX
 WHEN I choose to add a roleX
