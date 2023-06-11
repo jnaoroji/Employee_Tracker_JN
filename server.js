@@ -281,7 +281,7 @@ const addEmployee = async () => {
       },
       {
         type: "list",
-        message: "What is this employees role?",
+        message: "Which department does this employee belong to?",
         name: "departmentRoles",
         choices: departments.map((department) => {
           return { name: department.department_name, value: department.id };
@@ -324,7 +324,7 @@ const addEmployee = async () => {
             return;
           }
           console.log(
-            `Added ${newFname} ${newLname} to database! Their new role is ${departmentName} and their manager is ${managerName}.`
+            `Added ${newFname} ${newLname} to database! This role is in ${departmentName} department and their manager is ${managerName}.`
           );
           promptUser();
         }
